@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutterapplicationwithnodejs/FloatingActionBar.dart';
 import 'package:flutterapplicationwithnodejs/login.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -95,6 +96,8 @@ class _DashboardState extends State<Dashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      
+      //app bar
       appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
@@ -104,6 +107,55 @@ class _DashboardState extends State<Dashboard> {
           ),
         ],
       ),
+
+      //floating action button
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Add your action here
+        },
+        child: const Icon(Icons.add),
+        backgroundColor: Colors.blue, // Set the background color of the FAB
+        foregroundColor: Colors.white, // Set the icon color of the FAB
+        // elevation: 6.0, // Set the elevation of the FAB
+        shape: const CircleBorder(), // Set the shape of the FAB
+        mini: true,
+      ),
+
+
+      //bottom navigation bar
+      bottomNavigationBar: BottomAppBar(
+      child: SizedBox(
+        height: 60,
+        child: Row(
+          children: [
+            Expanded(
+              child: IconButton(
+                iconSize: 32,
+                icon: const Icon(Icons.home),
+                onPressed: () {},
+              ),
+            ),
+
+            const VerticalDivider(
+              width: 1,
+              thickness: 1,
+              indent: 10,
+              endIndent: 10,
+            ),
+
+            Expanded(
+              child: IconButton(
+                iconSize: 32,
+                icon: const Icon(Icons.restaurant_menu),
+                onPressed: () {},
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+      
       body: Center(child: _buildBody()),
     );
   }
