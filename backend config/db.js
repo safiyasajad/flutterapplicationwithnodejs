@@ -1,9 +1,12 @@
 import {Pool} from 'pg';
 import dotenv from 'dotenv';
 
+// Load PostgreSQL connection values from the .env file.
 dotenv.config()
 
-//database connection
+// Create a PostgreSQL connection pool.
+// A pool lets the app reuse database connections instead of opening a new
+// connection for every login/register request.
 const pool = new Pool({
         host: process.env.DB_HOST,
         port: process.env.DB_PORT,
@@ -15,16 +18,20 @@ const pool = new Pool({
 
 })
 
+// This runs whenever a new database connection is successfully created.
 pool.on("connect", ()=>{
     console.log('connected to db');
     
 })
 
+// This runs when the pool has a database connection problem.
+// The app logs it so you can diagnose wrong credentials, stopped database, etc.
 pool.on("error", ()=>{
     console.log('error connecting to db');
 });
 
 
+// Export the pool so route files can run SQL queries with pool.query(...).
 export default pool;
 
 
