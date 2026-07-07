@@ -122,10 +122,11 @@ router.post('/logout',async (req,res) => {
 
 router.get('/orders', protect, async (req, res) => {
     try {
+        //checks the user id of the logged in user and returns all 
+        // orders made by that user
         const result = await pool.query(
             `SELECT *
              FROM orders
-             //checks the user id of the logged in user and returns all orders made by that user
              WHERE user_id = $1
              ORDER BY ordered_at DESC`,
             [req.user.id]
