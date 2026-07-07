@@ -107,7 +107,7 @@ class _DashboardState extends State<Dashboard> {
           ),
         ],
       ),
-
+      
       //floating action button
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
@@ -115,16 +115,17 @@ class _DashboardState extends State<Dashboard> {
           // Add your action here
         },
         child: const Icon(Icons.add),
-        backgroundColor: Colors.blue, // Set the background color of the FAB
+        backgroundColor: Colors.black, // Set the background color of the FAB
         foregroundColor: Colors.white, // Set the icon color of the FAB
         // elevation: 6.0, // Set the elevation of the FAB
         shape: const CircleBorder(), // Set the shape of the FAB
-        mini: true,
-      ),
+     ),
 
 
       //bottom navigation bar
       bottomNavigationBar: BottomAppBar(
+        notchMargin: 6.0,
+        shape: const CircularNotchedRectangle(),
       child: SizedBox(
         height: 60,
         child: Row(
@@ -132,8 +133,14 @@ class _DashboardState extends State<Dashboard> {
             Expanded(
               child: IconButton(
                 iconSize: 32,
-                icon: const Icon(Icons.home),
-                onPressed: () {},
+                icon: const Icon(Icons.restaurant_menu),
+                onPressed: () {Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const Floatingactionbar(),
+                    ),
+                  );
+                },
               ),
             ),
 
@@ -147,8 +154,15 @@ class _DashboardState extends State<Dashboard> {
             Expanded(
               child: IconButton(
                 iconSize: 32,
-                icon: const Icon(Icons.restaurant_menu),
-                onPressed: () {},
+                icon: const Icon(Icons.home),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const Dashboard(),
+                    ),
+                  );
+                },
               ),
             ),
           ],
