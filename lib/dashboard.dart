@@ -20,17 +20,30 @@ class Dashboard extends StatefulWidget {
 
 
 class _DashboardState extends State<Dashboard> {
+ List<dynamic> _filteredOrders = [];
+
+  void _runFilter(String value) {
+    final results = _orders.where((order) {
+      return order['item_name']
+          .toString()
+          .toLowerCase()
+          .contains(value.toLowerCase());
+    }).toList();
+
+    setState(() {
+      _filteredOrders = results;
+    });
+  }
   int _selectedIndex = 0;
   // This is the same backend base URL used by the login page.
   // 10.0.2.2 is used because the Android emulator needs this special address
   // to reach localhost on your computer.
   final String baseUrl = 'http://10.0.2.2:5000/api/auth';
 
-  // Stores the logged-in user's details returned by GET /api/auth/me.
+  // Stores the logged-in usLer's details returned by GET /api/auth/me.
   // The backend returns keys like name, email, and phonenumber.
   Map<String, dynamic>? _user;
   List<dynamic> _orders = [];
-
   // Stores an error message if loading the profile fails.
   String? _error;
 
@@ -108,6 +121,7 @@ class _DashboardState extends State<Dashboard> {
         if (response.statusCode == 200) {
           setState(() {
             _orders = jsonDecode(response.body);
+            _filteredOrders = _orders;
           });
         }
       } catch (e) {
@@ -140,8 +154,8 @@ class _DashboardState extends State<Dashboard> {
       appBar: AppBar(
         title: Text(
           _selectedIndex == 0
-          ? "Dashboard"
-          : "Order History",
+          ? "Order History"
+          : "Dashboard",
           ),
         actions: [
           IconButton(
@@ -150,7 +164,11 @@ class _DashboardState extends State<Dashboard> {
           ),
         ],
       ),
-      
+
+        
+
+
+
       //floating action button
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
@@ -208,6 +226,10 @@ class _DashboardState extends State<Dashboard> {
       ),
     ),
       
+
+      //when the user is logged in the page that gets displayed is the
+      //order history page 
+
       body: _selectedIndex == 0
     ? dashboardPage()
     : orderHistoryPage(),
@@ -221,27 +243,43 @@ class _DashboardState extends State<Dashboard> {
   );
 }
   //creates a order history page 
-  Widget orderHistoryPage() {
-  
-  return ListView.builder(
-    itemCount: _orders.length,
-    itemBuilder: (context, index) {
-
-      final order = _orders[index];
-
-      //what the returned card will look like, with the item name, quantity, price and status
-      return Card(
-        child: ListTile(
-          title: Text(order['item_name']),
-          subtitle: Text(
-            "Qty: ${order['quantity']} • RM ${order['price']}",
+ Widget orderHistoryPage() {
+  return Column(
+    children: [
+      Padding(
+        padding: const EdgeInsets.all(12),
+        child: TextField(
+          decoration: const InputDecoration(
+            hintText: 'Search...',
+            prefixIcon: Icon(Icons.search),
+            border: OutlineInputBorder(),
           ),
-          trailing: Text(order['status']),
+          onChanged: _runFilter,
         ),
-      );
-    },
+      ),
+
+      Expanded(
+        child: ListView.builder(
+          itemCount: _filteredOrders.length,
+          itemBuilder: (context, index) {
+            final order = _filteredOrders[index];
+
+            return Card(
+              child: ListTile(
+                title: Text(order['item_name']),
+                subtitle: Text(
+                  "Qty: ${order['quantity']} • RM ${order['price']}",
+                ),
+                trailing: Text(order['status']),
+              ),
+            );
+          },
+        ),
+      ),
+    ],
   );
-}
+}   
+ 
 
   Widget _buildBody() {
     // While /me is loading, show a spinner instead of empty content.
@@ -258,7 +296,7 @@ class _DashboardState extends State<Dashboard> {
     }
 
     // Use fallback text so the UI does not crash if a field is missing.
-    final id = _user?['id'] ?? 'Unknown';
+    // final id = _user?['id'] ?? 'Unknown';
     final name = _user?['name'] ?? 'Unknown';
     final email = _user?['email'] ?? 'Unknown';
     final phone = _user?['phonenumber'] ?? 'Unknown';
@@ -274,14 +312,15 @@ class _DashboardState extends State<Dashboard> {
             'User Details',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 12),
-          Text('user: $id', style: const TextStyle(fontSize: 18)),
+          
           const SizedBox(height: 24),
           Text('Name: $name', style: const TextStyle(fontSize: 18)),
           const SizedBox(height: 12),
           Text('Phone: $phone', style: const TextStyle(fontSize: 18)),
           const SizedBox(height: 12),
           Text('Email: $email', style: const TextStyle(fontSize: 18)),
+          // const SizedBox(height: 12),
+          // Text('user: $id', style: const TextStyle(fontSize: 18)),
         ],
       ),
     );
