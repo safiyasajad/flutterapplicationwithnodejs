@@ -29,6 +29,7 @@ class _DashboardState extends State<Dashboard> {
   // Stores the logged-in user's details returned by GET /api/auth/me.
   // The backend returns keys like name, email, and phonenumber.
   Map<String, dynamic>? _user;
+  List<dynamic> _orders = [];
 
   // Stores an error message if loading the profile fails.
   String? _error;
@@ -42,6 +43,7 @@ class _DashboardState extends State<Dashboard> {
 
     // Load the current user's profile as soon as the dashboard opens.
     _loadUser();
+    _loadOrders();
   }
 
   Future<void> _loadUser() async {
@@ -86,6 +88,36 @@ class _DashboardState extends State<Dashboard> {
       });
     }
   }
+
+
+    Future<void> _loadOrders() async {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString('token');
+
+        final response = await http.get(
+          Uri.parse('$baseUrl/orders'),
+          headers: {
+            'Authorization': 'Bearer $token',
+          },
+        );
+
+        print(response.statusCode);
+        print(response.body);
+
+        if (response.statusCode == 200) {
+          setState(() {
+            _orders = jsonDecode(response.body);
+          });
+        }
+      } catch (e) {
+        print(e);
+      }
+
+      
+    }
+
+
 
   Future<void> logout(BuildContext context) async {
     // Remove the saved JWT so the app no longer treats the user as logged in.
@@ -190,14 +222,24 @@ class _DashboardState extends State<Dashboard> {
 }
   //creates a order history page 
   Widget orderHistoryPage() {
-  return const Center(
-    child: Text(
-      "Order History",
-      style: TextStyle(
-        fontSize: 30,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
+  
+  return ListView.builder(
+    itemCount: _orders.length,
+    itemBuilder: (context, index) {
+
+      final order = _orders[index];
+
+      //what the returned card will look like, with the item name, quantity, price and status
+      return Card(
+        child: ListTile(
+          title: Text(order['item_name']),
+          subtitle: Text(
+            "Qty: ${order['quantity']} • RM ${order['price']}",
+          ),
+          trailing: Text(order['status']),
+        ),
+      );
+    },
   );
 }
 
@@ -216,6 +258,7 @@ class _DashboardState extends State<Dashboard> {
     }
 
     // Use fallback text so the UI does not crash if a field is missing.
+    final id = _user?['id'] ?? 'Unknown';
     final name = _user?['name'] ?? 'Unknown';
     final email = _user?['email'] ?? 'Unknown';
     final phone = _user?['phonenumber'] ?? 'Unknown';
@@ -231,6 +274,8 @@ class _DashboardState extends State<Dashboard> {
             'User Details',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
+          const SizedBox(height: 12),
+          Text('user: $id', style: const TextStyle(fontSize: 18)),
           const SizedBox(height: 24),
           Text('Name: $name', style: const TextStyle(fontSize: 18)),
           const SizedBox(height: 12),

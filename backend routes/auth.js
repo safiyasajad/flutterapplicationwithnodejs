@@ -119,7 +119,28 @@ router.post('/logout',async (req,res) => {
     res.cookie('token','',{...cookieOptions, maxAge:1});
     res.json({message:'logged out sugessfullt'});
 })
- 
+
+router.get('/orders', protect, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT *
+             FROM orders
+             WHERE user_id = $1
+             ORDER BY ordered_at DESC`,
+            [req.user.id]
+        );
+
+        // Flutter expects a list, not an object
+        res.json(result.rows);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: "Failed to fetch orders"
+        });
+    }
+});
+
 
 //exporting data to be able to use it in server.js
 export default router;
