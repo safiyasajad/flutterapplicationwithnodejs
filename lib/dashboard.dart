@@ -14,6 +14,7 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
+  int _selectedIndex = 0;
   // This is the same backend base URL used by the login page.
   // 10.0.2.2 is used because the Android emulator needs this special address
   // to reach localhost on your computer.
@@ -99,7 +100,11 @@ class _DashboardState extends State<Dashboard> {
       
       //app bar
       appBar: AppBar(
-        title: const Text('Dashboard'),
+        title: Text(
+          _selectedIndex == 0
+          ? "Dashboard"
+          : "Order History",
+          ),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -134,12 +139,10 @@ class _DashboardState extends State<Dashboard> {
               child: IconButton(
                 iconSize: 32,
                 icon: const Icon(Icons.restaurant_menu),
-                onPressed: () {Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const Floatingactionbar(),
-                    ),
-                  );
+                onPressed: () {
+                  setState(() {
+                    _selectedIndex = 1;
+                  });
                 },
               ),
             ),
@@ -156,12 +159,9 @@ class _DashboardState extends State<Dashboard> {
                 iconSize: 32,
                 icon: const Icon(Icons.home),
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const Dashboard(),
-                    ),
-                  );
+                  setState(() {
+                    _selectedIndex = 0;
+                  });
                 },
               ),
             ),
@@ -170,9 +170,30 @@ class _DashboardState extends State<Dashboard> {
       ),
     ),
       
-      body: Center(child: _buildBody()),
+      body: _selectedIndex == 0
+    ? dashboardPage()
+    : orderHistoryPage(),
     );
   }
+
+  //creates a dashboard page with user details
+  Widget dashboardPage() {
+  return Center(
+    child: _buildBody(),
+  );
+}
+  //creates a order history page 
+  Widget orderHistoryPage() {
+  return const Center(
+    child: Text(
+      "Order History",
+      style: TextStyle(
+        fontSize: 30,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  );
+}
 
   Widget _buildBody() {
     // While /me is loading, show a spinner instead of empty content.
