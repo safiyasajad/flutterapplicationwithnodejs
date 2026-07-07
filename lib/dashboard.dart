@@ -13,6 +13,12 @@ class Dashboard extends StatefulWidget {
   State<Dashboard> createState() => _DashboardState();
 }
 
+
+//use of set state to change the body of the dashboard page to order 
+//history page and vice versa when the bottom navigation bar icons 
+//are clicked
+
+
 class _DashboardState extends State<Dashboard> {
   int _selectedIndex = 0;
   // This is the same backend base URL used by the login page.
