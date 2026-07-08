@@ -31,6 +31,22 @@ class _DashboardState extends State<Dashboard> {
     });
   }
 
+//returns the color of the status of the order
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'delivered':
+        return Colors.green;
+      case 'preparing':
+        return Colors.yellow.shade700;
+      case 'out for delivery':
+        return Colors.orange;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
   int _selectedIndex = 0;
   // This is the same backend base URL used by the login page.
   // 10.0.2.2 is used because the Android emulator needs this special address
@@ -99,7 +115,7 @@ class _DashboardState extends State<Dashboard> {
     }
   }
 
-//delete order function
+  //delete order function
   Future<void> _deleteOrder(dynamic order) async {
     try {
       final orderId = order['id'];
@@ -288,8 +304,23 @@ class _DashboardState extends State<Dashboard> {
               return Card(
                 child: ListTile(
                   title: Text(order['item_name']),
-                  subtitle: Text(
-                    "Qty: ${order['quantity']} • RM ${order['price']}",
+                  subtitle: RichText(
+                    text: TextSpan(
+                      style: DefaultTextStyle.of(context).style,
+                      children: [
+                        TextSpan(
+                          text:
+                              "Qty: ${order['quantity']} • RM ${order['price']} • ",
+                        ),
+                        TextSpan(
+                          text: order['status'].toString(),
+                          style: TextStyle(
+                            color: _getStatusColor(order['status'].toString()),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
                   trailing: PopupMenuButton<String>(
