@@ -21,16 +21,50 @@ class _DashboardState extends State<Dashboard> {
   final _itemNameController = TextEditingController();
   final _quantityController = TextEditingController();
   final _priceController = TextEditingController();
+  final _minPriceController = TextEditingController();
+  final _maxPriceController = TextEditingController();
 
   String _selectedStatus = "Preparing";
+  String _searchText = '';
+  bool _sortNewestFirst = true;
   List<dynamic> _filteredOrders = [];
 
   void _runFilter(String value) {
+    _searchText = value;
+    _applyFiltersAndSort();
+  }
+
+  double _orderPrice(dynamic order) {
+    return double.tryParse(order['price'].toString()) ?? 0;
+  }
+
+  DateTime _orderDate(dynamic order) {
+    return DateTime.tryParse(order['ordered_at'].toString()) ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
+  void _applyFiltersAndSort() {
+    final minPrice = double.tryParse(_minPriceController.text.trim());
+    final maxPrice = double.tryParse(_maxPriceController.text.trim());
+
     final results = _orders.where((order) {
-      return order['item_name'].toString().toLowerCase().contains(
-        value.toLowerCase(),
-      );
+      final itemName = order['item_name'].toString().toLowerCase();
+      final price = _orderPrice(order);
+      final matchesSearch = itemName.contains(_searchText.toLowerCase());
+      final aboveMin = minPrice == null || price >= minPrice;
+      final belowMax = maxPrice == null || price <= maxPrice;
+
+      return matchesSearch && aboveMin && belowMax;
     }).toList();
+
+    results.sort((a, b) {
+      final firstDate = _orderDate(a);
+      final secondDate = _orderDate(b);
+
+      return _sortNewestFirst
+          ? secondDate.compareTo(firstDate)
+          : firstDate.compareTo(secondDate);
+    });
 
     setState(() {
       _filteredOrders = results;
@@ -76,6 +110,16 @@ class _DashboardState extends State<Dashboard> {
     // Load the current user's profile as soon as the dashboard opens.
     _loadUser();
     _loadOrders();
+  }
+
+  @override
+  void dispose() {
+    _itemNameController.dispose();
+    _quantityController.dispose();
+    _priceController.dispose();
+    _minPriceController.dispose();
+    _maxPriceController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUser() async {
@@ -146,8 +190,8 @@ class _DashboardState extends State<Dashboard> {
       if (response.statusCode == 200) {
         setState(() {
           _orders.removeWhere((item) => item['id'] == orderId);
-          _filteredOrders.removeWhere((item) => item['id'] == orderId);
         });
+        _applyFiltersAndSort();
 
         if (!mounted) return;
 
@@ -181,10 +225,8 @@ class _DashboardState extends State<Dashboard> {
       print(response.body);
 
       if (response.statusCode == 200) {
-        setState(() {
-          _orders = jsonDecode(response.body);
-          _filteredOrders = _orders;
-        });
+        _orders = jsonDecode(response.body);
+        _applyFiltersAndSort();
       }
     } catch (e) {
       print(e);
@@ -424,6 +466,73 @@ class _DashboardState extends State<Dashboard> {
             onChanged: _runFilter,
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              SizedBox(
+                width: 190,
+                child: DropdownButtonFormField<bool>(
+                  value: _sortNewestFirst,
+                  decoration: const InputDecoration(
+                    labelText: 'Sort by date',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: true, child: Text('Newest first')),
+                    DropdownMenuItem(value: false, child: Text('Oldest first')),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+
+                    _sortNewestFirst = value;
+                    _applyFiltersAndSort();
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 140,
+                child: TextField(
+                  controller: _minPriceController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Min price',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (_) => _applyFiltersAndSort(),
+                ),
+              ),
+              SizedBox(
+                width: 140,
+                child: TextField(
+                  controller: _maxPriceController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Max price',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (_) => _applyFiltersAndSort(),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  _minPriceController.clear();
+                  _maxPriceController.clear();
+                  _applyFiltersAndSort();
+                },
+                child: const Text('Clear price'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
 
         Expanded(
           child: ListView.builder(
