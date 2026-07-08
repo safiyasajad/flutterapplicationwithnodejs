@@ -117,7 +117,7 @@ router.get('/me',protect, async (req,res) => {
 // Clears the browser cookie. Flutter also removes the token locally on logout.
 router.post('/logout',async (req,res) => {
     res.cookie('token','',{...cookieOptions, maxAge:1});
-    res.json({message:'logged out sugessfullt'});
+    res.json({message:'logged out successfully'});
 })
 
 router.get('/orders', protect, async (req, res) => {
@@ -139,6 +139,32 @@ router.get('/orders', protect, async (req, res) => {
         console.error(error);
         res.status(500).json({
             message: "Failed to fetch orders"
+        });
+    }
+});
+
+//deletes the order frm the database too
+router.delete('/orders/:id', protect, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const result = await pool.query(
+            `DELETE FROM orders
+             WHERE id = $1 AND user_id = $2
+             RETURNING *`,
+            [id, req.user.id]
+        );
+
+
+        res.json({
+            message: "Order deleted successfully",
+            order: result.rows[0]
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: "Failed to delete order"
         });
     }
 });
