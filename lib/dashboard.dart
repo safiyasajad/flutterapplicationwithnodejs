@@ -17,61 +17,28 @@ class Dashboard extends StatefulWidget {
 //are clicked
 
 class _DashboardState extends State<Dashboard> {
-  //defining the text editing controllers for the CreateOrders
-  final _itemNameController = TextEditingController();
-  final _quantityController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _minPriceController = TextEditingController();
-  final _maxPriceController = TextEditingController();
 
-  String _selectedStatus = "Preparing";
-  String _searchText = '';
-  bool _sortNewestFirst = true;
+  //defining the text editing controllers for the CreateOrders
+final _itemNameController = TextEditingController();
+final _quantityController = TextEditingController();
+final _priceController = TextEditingController();
+
+String _selectedStatus = "Preparing";
   List<dynamic> _filteredOrders = [];
 
   void _runFilter(String value) {
-    _searchText = value;
-    _applyFiltersAndSort();
-  }
-
-  double _orderPrice(dynamic order) {
-    return double.tryParse(order['price'].toString()) ?? 0;
-  }
-
-  DateTime _orderDate(dynamic order) {
-    return DateTime.tryParse(order['ordered_at'].toString()) ??
-        DateTime.fromMillisecondsSinceEpoch(0);
-  }
-
-  void _applyFiltersAndSort() {
-    final minPrice = double.tryParse(_minPriceController.text.trim());
-    final maxPrice = double.tryParse(_maxPriceController.text.trim());
-
     final results = _orders.where((order) {
-      final itemName = order['item_name'].toString().toLowerCase();
-      final price = _orderPrice(order);
-      final matchesSearch = itemName.contains(_searchText.toLowerCase());
-      final aboveMin = minPrice == null || price >= minPrice;
-      final belowMax = maxPrice == null || price <= maxPrice;
-
-      return matchesSearch && aboveMin && belowMax;
+      return order['item_name'].toString().toLowerCase().contains(
+        value.toLowerCase(),
+      );
     }).toList();
-
-    results.sort((a, b) {
-      final firstDate = _orderDate(a);
-      final secondDate = _orderDate(b);
-
-      return _sortNewestFirst
-          ? secondDate.compareTo(firstDate)
-          : firstDate.compareTo(secondDate);
-    });
 
     setState(() {
       _filteredOrders = results;
     });
   }
 
-  //returns the color of the status of the order
+//returns the color of the status of the order
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'delivered':
@@ -110,16 +77,6 @@ class _DashboardState extends State<Dashboard> {
     // Load the current user's profile as soon as the dashboard opens.
     _loadUser();
     _loadOrders();
-  }
-
-  @override
-  void dispose() {
-    _itemNameController.dispose();
-    _quantityController.dispose();
-    _priceController.dispose();
-    _minPriceController.dispose();
-    _maxPriceController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadUser() async {
@@ -190,8 +147,8 @@ class _DashboardState extends State<Dashboard> {
       if (response.statusCode == 200) {
         setState(() {
           _orders.removeWhere((item) => item['id'] == orderId);
+          _filteredOrders.removeWhere((item) => item['id'] == orderId);
         });
-        _applyFiltersAndSort();
 
         if (!mounted) return;
 
@@ -225,8 +182,10 @@ class _DashboardState extends State<Dashboard> {
       print(response.body);
 
       if (response.statusCode == 200) {
-        _orders = jsonDecode(response.body);
-        _applyFiltersAndSort();
+        setState(() {
+          _orders = jsonDecode(response.body);
+          _filteredOrders = _orders;
+        });
       }
     } catch (e) {
       print(e);
@@ -246,53 +205,53 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
-  Future<void> CreateOrders() async {
-    try {
-      final quantity = int.tryParse(_quantityController.text.trim());
-      final price = double.tryParse(_priceController.text.trim());
+Future<void> CreateOrders() async {
+  try {
+    final quantity = int.tryParse(_quantityController.text.trim());
+    final price = double.tryParse(_priceController.text.trim());
 
-      if (_itemNameController.text.trim().isEmpty ||
-          quantity == null ||
-          price == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please fill all fields correctly")),
-        );
-        return;
-      }
-
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/orders'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          "item_name": _itemNameController.text.trim(),
-          "quantity": quantity,
-          "price": price,
-          "status": _selectedStatus,
-        }),
+    if (_itemNameController.text.trim().isEmpty ||
+        quantity == null ||
+        price == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please fill all fields correctly"),
+        ),
       );
-
-      if (response.statusCode == 201) {
-        if (!mounted) return;
-        Navigator.pop(context);
-
-        _itemNameController.clear();
-        _quantityController.clear();
-        _priceController.clear();
-
-        await _loadOrders();
-      } else {
-        print(response.body);
-      }
-    } catch (e) {
-      print(e);
+      return;
     }
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/orders'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        "item_name": _itemNameController.text.trim(),
+        "quantity": quantity,
+        "price": price,
+        "status": _selectedStatus,
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      _itemNameController.clear();
+      _quantityController.clear();
+      _priceController.clear();
+
+      await _loadOrders();
+    }
+  } catch (e) {
+    print(e);
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -312,93 +271,75 @@ class _DashboardState extends State<Dashboard> {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
         onPressed: () {
+          // Add your action here
           showDialog(
-            context: context,
-            builder: (context) {
-              return AlertDialog(
-                title: const Text('Create Order'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: _itemNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Item Name',
-                        border: OutlineInputBorder(),
-                      ),
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Create Order'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _itemNameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Item Name',
+                      border: OutlineInputBorder(),
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _quantityController,
-                      decoration: const InputDecoration(
-                        labelText: 'Quantity',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _priceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Price',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      value: _selectedStatus,
-                      decoration: const InputDecoration(
-                        labelText: "Status",
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: "Preparing",
-                          child: Text("Preparing"),
-                        ),
-                        DropdownMenuItem(
-                          value: "Out for Delivery",
-                          child: Text("Out for Delivery"),
-                        ),
-                        DropdownMenuItem(
-                          value: "Delivered",
-                          child: Text("Delivered"),
-                        ),
-                        DropdownMenuItem(
-                          value: "Cancelled",
-                          child: Text("Cancelled"),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        if (value == null) return;
-
-                        setState(() {
-                          _selectedStatus = value;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
                   ),
-                  TextButton(
-                    onPressed: CreateOrders,
-                    child: const Text('Create'),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _quantityController,
+                    decoration: const InputDecoration(
+                      labelText: 'Quantity',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _priceController,
+                    decoration: const InputDecoration(
+                      labelText: 'Price',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Put your dropdown here
+                  DropdownButtonFormField<String>(
+                    value: _selectedStatus,
+                    decoration: const InputDecoration(
+                      labelText: "Status",
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: "Preparing", child: Text("Preparing")),
+                      DropdownMenuItem(value: "Out for Delivery", child: Text("Out for Delivery")),
+                      DropdownMenuItem(value: "Delivered", child: Text("Delivered")),
+                      DropdownMenuItem(value: "Cancelled", child: Text("Cancelled")),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedStatus = value!;
+                      });
+                    },
                   ),
                 ],
-              );
-            },
-          );
-        },
+              ),
+              actions: [
+                TextButton(
+                  onPressed: CreateOrders,
+                  child: const Text('Create'),
+                ),
+              ],
+            );
+          },
+        );
+      },
         child: const Icon(Icons.add),
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        shape: const CircleBorder(),
       ),
-
-      bottomNavigationBar: BottomAppBar(
+      
+  bottomNavigationBar: BottomAppBar(
         notchMargin: 6.0,
         shape: const CircularNotchedRectangle(),
         child: SizedBox(
@@ -466,73 +407,6 @@ class _DashboardState extends State<Dashboard> {
             onChanged: _runFilter,
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              SizedBox(
-                width: 190,
-                child: DropdownButtonFormField<bool>(
-                  value: _sortNewestFirst,
-                  decoration: const InputDecoration(
-                    labelText: 'Sort by date',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: true, child: Text('Newest first')),
-                    DropdownMenuItem(value: false, child: Text('Oldest first')),
-                  ],
-                  onChanged: (value) {
-                    if (value == null) return;
-
-                    _sortNewestFirst = value;
-                    _applyFiltersAndSort();
-                  },
-                ),
-              ),
-              SizedBox(
-                width: 140,
-                child: TextField(
-                  controller: _minPriceController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'Min price',
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (_) => _applyFiltersAndSort(),
-                ),
-              ),
-              SizedBox(
-                width: 140,
-                child: TextField(
-                  controller: _maxPriceController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'Max price',
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (_) => _applyFiltersAndSort(),
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  _minPriceController.clear();
-                  _maxPriceController.clear();
-                  _applyFiltersAndSort();
-                },
-                child: const Text('Clear price'),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
 
         Expanded(
           child: ListView.builder(
@@ -631,13 +505,13 @@ class _DashboardState extends State<Dashboard> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'User Details',
+          Text(
+            'Hello, $name!',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
 
           const SizedBox(height: 24),
-          Text('Name: $name', style: const TextStyle(fontSize: 18)),
+          Text('username: $name', style: const TextStyle(fontSize: 18)),
           const SizedBox(height: 12),
           Text('Phone: $phone', style: const TextStyle(fontSize: 18)),
           const SizedBox(height: 12),
