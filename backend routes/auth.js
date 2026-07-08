@@ -63,6 +63,53 @@ router.post('/register',async (req,res) => {
 })
 
 
+router.post('/orders', protect, async (req, res) => {
+    try {
+        const { item_name, quantity, price, status } = req.body;
+
+        if (!item_name || !quantity || !price || !status) {
+            return res.status(400).json({
+                message: "Please provide all required fields"
+            });
+        }
+        
+        const validStatuses = [
+        "Preparing",
+        "Out for Delivery",
+        "Delivered",
+        "Cancelled",
+        ];
+
+        if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+            message: "Invalid order status",
+        });
+        }
+
+        const newOrder = await pool.query(
+            `INSERT INTO orders
+            (user_id, item_name, quantity, price, status)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING *`,
+            [
+                req.user.id,
+                item_name,
+                quantity,
+                price,
+                status,
+            ]
+        );
+
+        res.status(201).json(newOrder.rows[0]);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            message: "Server error"
+        });
+    }
+});
+
 // LOGIN
 // POST /api/auth/login
 // Expected body from Flutter: email and password.

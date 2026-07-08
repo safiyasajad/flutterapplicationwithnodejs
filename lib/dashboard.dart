@@ -17,6 +17,12 @@ class Dashboard extends StatefulWidget {
 //are clicked
 
 class _DashboardState extends State<Dashboard> {
+  //defining the text editing controllers for the CreateOrders
+  final _itemNameController = TextEditingController();
+  final _quantityController = TextEditingController();
+  final _priceController = TextEditingController();
+
+  String _selectedStatus = "Preparing";
   List<dynamic> _filteredOrders = [];
 
   void _runFilter(String value) {
@@ -31,7 +37,7 @@ class _DashboardState extends State<Dashboard> {
     });
   }
 
-//returns the color of the status of the order
+  //returns the color of the status of the order
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'delivered':
@@ -198,6 +204,54 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
+  Future<void> CreateOrders() async {
+    try {
+      final quantity = int.tryParse(_quantityController.text.trim());
+      final price = double.tryParse(_priceController.text.trim());
+
+      if (_itemNameController.text.trim().isEmpty ||
+          quantity == null ||
+          price == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please fill all fields correctly")),
+        );
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/orders'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          "item_name": _itemNameController.text.trim(),
+          "quantity": quantity,
+          "price": price,
+          "status": _selectedStatus,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        if (!mounted) return;
+        Navigator.pop(context);
+
+        _itemNameController.clear();
+        _quantityController.clear();
+        _priceController.clear();
+
+        await _loadOrders();
+      } else {
+        print(response.body);
+      }
+    } catch (e) {
+      print(e);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -216,16 +270,92 @@ class _DashboardState extends State<Dashboard> {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Add your action here
+          showDialog(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                title: const Text('Create Order'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: _itemNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Item Name',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _quantityController,
+                      decoration: const InputDecoration(
+                        labelText: 'Quantity',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _priceController,
+                      decoration: const InputDecoration(
+                        labelText: 'Price',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: _selectedStatus,
+                      decoration: const InputDecoration(
+                        labelText: "Status",
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: "Preparing",
+                          child: Text("Preparing"),
+                        ),
+                        DropdownMenuItem(
+                          value: "Out for Delivery",
+                          child: Text("Out for Delivery"),
+                        ),
+                        DropdownMenuItem(
+                          value: "Delivered",
+                          child: Text("Delivered"),
+                        ),
+                        DropdownMenuItem(
+                          value: "Cancelled",
+                          child: Text("Cancelled"),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+
+                        setState(() {
+                          _selectedStatus = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: CreateOrders,
+                    child: const Text('Create'),
+                  ),
+                ],
+              );
+            },
+          );
         },
         child: const Icon(Icons.add),
-        backgroundColor: Colors.black, // Set the background color of the FAB
-        foregroundColor: Colors.white, // Set the icon color of the FAB
-        // elevation: 6.0, // Set the elevation of the FAB
-        shape: const CircleBorder(), // Set the shape of the FAB
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        shape: const CircleBorder(),
       ),
 
-      //bottom navigation bar
       bottomNavigationBar: BottomAppBar(
         notchMargin: 6.0,
         shape: const CircularNotchedRectangle(),
