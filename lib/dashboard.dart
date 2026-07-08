@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutterapplicationwithnodejs/FloatingActionBar.dart';
 import 'package:flutterapplicationwithnodejs/login.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,27 +12,25 @@ class Dashboard extends StatefulWidget {
   State<Dashboard> createState() => _DashboardState();
 }
 
-
-//use of set state to change the body of the dashboard page to order 
-//history page and vice versa when the bottom navigation bar icons 
+//use of set state to change the body of the dashboard page to order
+//history page and vice versa when the bottom navigation bar icons
 //are clicked
 
-
 class _DashboardState extends State<Dashboard> {
- List<dynamic> _filteredOrders = [];
+  List<dynamic> _filteredOrders = [];
 
   void _runFilter(String value) {
     final results = _orders.where((order) {
-      return order['item_name']
-          .toString()
-          .toLowerCase()
-          .contains(value.toLowerCase());
+      return order['item_name'].toString().toLowerCase().contains(
+        value.toLowerCase(),
+      );
     }).toList();
 
     setState(() {
       _filteredOrders = results;
     });
   }
+
   int _selectedIndex = 0;
   // This is the same backend base URL used by the login page.
   // 10.0.2.2 is used because the Android emulator needs this special address
@@ -102,36 +99,75 @@ class _DashboardState extends State<Dashboard> {
     }
   }
 
+//delete order function
+  Future<void> _deleteOrder(dynamic order) async {
+    try {
+      final orderId = order['id'];
 
-    Future<void> _loadOrders() async {
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final token = prefs.getString('token');
-
-        final response = await http.get(
-          Uri.parse('$baseUrl/orders'),
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
-        );
-
-        print(response.statusCode);
-        print(response.body);
-
-        if (response.statusCode == 200) {
-          setState(() {
-            _orders = jsonDecode(response.body);
-            _filteredOrders = _orders;
-          });
-        }
-      } catch (e) {
-        print(e);
+      if (orderId == null) {
+        throw Exception('Order id is missing');
       }
 
-      
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) {
+        throw Exception('No saved login token');
+      }
+
+      //sends the delete requet. if
+      final response = await http.delete(
+        Uri.parse('$baseUrl/orders/$orderId'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _orders.removeWhere((item) => item['id'] == orderId);
+          _filteredOrders.removeWhere((item) => item['id'] == orderId);
+        });
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Order deleted successfully')),
+        );
+      } else {
+        final data = jsonDecode(response.body);
+        throw Exception(data['message'] ?? 'Failed to delete order');
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
+  }
 
+  Future<void> _loadOrders() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
 
+      final response = await http.get(
+        Uri.parse('$baseUrl/orders'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      print(response.statusCode);
+      print(response.body);
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _orders = jsonDecode(response.body);
+          _filteredOrders = _orders;
+        });
+      }
+    } catch (e) {
+      print(e);
+    }
+  }
 
   Future<void> logout(BuildContext context) async {
     // Remove the saved JWT so the app no longer treats the user as logged in.
@@ -149,14 +185,9 @@ class _DashboardState extends State<Dashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
       //app bar
       appBar: AppBar(
-        title: Text(
-          _selectedIndex == 0
-          ? "Order History"
-          : "Dashboard",
-          ),
+        title: Text(_selectedIndex == 0 ? "Order History" : "Dashboard"),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -164,10 +195,6 @@ class _DashboardState extends State<Dashboard> {
           ),
         ],
       ),
-
-        
-
-
 
       //floating action button
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -180,106 +207,132 @@ class _DashboardState extends State<Dashboard> {
         foregroundColor: Colors.white, // Set the icon color of the FAB
         // elevation: 6.0, // Set the elevation of the FAB
         shape: const CircleBorder(), // Set the shape of the FAB
-     ),
-
+      ),
 
       //bottom navigation bar
       bottomNavigationBar: BottomAppBar(
         notchMargin: 6.0,
         shape: const CircularNotchedRectangle(),
-      child: SizedBox(
-        height: 60,
-        child: Row(
-          children: [
-            Expanded(
-              child: IconButton(
-                iconSize: 32,
-                icon: const Icon(Icons.restaurant_menu),
-                onPressed: () {
-                  setState(() {
-                    _selectedIndex = 1;
-                  });
-                },
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            children: [
+              Expanded(
+                child: IconButton(
+                  iconSize: 32,
+                  icon: const Icon(Icons.restaurant_menu),
+                  onPressed: () {
+                    setState(() {
+                      _selectedIndex = 1;
+                    });
+                  },
+                ),
               ),
-            ),
 
-            const VerticalDivider(
-              width: 1,
-              thickness: 1,
-              indent: 10,
-              endIndent: 10,
-            ),
-
-            Expanded(
-              child: IconButton(
-                iconSize: 32,
-                icon: const Icon(Icons.home),
-                onPressed: () {
-                  setState(() {
-                    _selectedIndex = 0;
-                  });
-                },
+              const VerticalDivider(
+                width: 1,
+                thickness: 1,
+                indent: 10,
+                endIndent: 10,
               ),
-            ),
-          ],
+
+              Expanded(
+                child: IconButton(
+                  iconSize: 32,
+                  icon: const Icon(Icons.home),
+                  onPressed: () {
+                    setState(() {
+                      _selectedIndex = 0;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-      
 
       //when the user is logged in the page that gets displayed is the
-      //order history page 
-
-      body: _selectedIndex == 0
-    ? dashboardPage()
-    : orderHistoryPage(),
+      //order history page
+      body: _selectedIndex == 0 ? dashboardPage() : orderHistoryPage(),
     );
   }
 
   //creates a dashboard page with user details
   Widget dashboardPage() {
-  return Center(
-    child: _buildBody(),
-  );
-}
-  //creates a order history page 
- Widget orderHistoryPage() {
-  return Column(
-    children: [
-      Padding(
-        padding: const EdgeInsets.all(12),
-        child: TextField(
-          decoration: const InputDecoration(
-            hintText: 'Search...',
-            prefixIcon: Icon(Icons.search),
-            border: OutlineInputBorder(),
+    return Center(child: _buildBody());
+  }
+
+  //creates a order history page
+  Widget orderHistoryPage() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: TextField(
+            decoration: const InputDecoration(
+              hintText: 'Search...',
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(),
+            ),
+            onChanged: _runFilter,
           ),
-          onChanged: _runFilter,
         ),
-      ),
 
-      Expanded(
-        child: ListView.builder(
-          itemCount: _filteredOrders.length,
-          itemBuilder: (context, index) {
-            final order = _filteredOrders[index];
+        Expanded(
+          child: ListView.builder(
+            itemCount: _filteredOrders.length,
+            itemBuilder: (context, index) {
+              final order = _filteredOrders[index];
 
-            return Card(
-              child: ListTile(
-                title: Text(order['item_name']),
-                subtitle: Text(
-                  "Qty: ${order['quantity']} • RM ${order['price']}",
+              return Card(
+                child: ListTile(
+                  title: Text(order['item_name']),
+                  subtitle: Text(
+                    "Qty: ${order['quantity']} • RM ${order['price']}",
+                  ),
+
+                  trailing: PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'details') {
+                        print('Details ${order['item_name']}');
+                      } else if (value == 'edit') {
+                        print('Edit ${order['item_name']}');
+                      } else if (value == 'delete') {
+                        _deleteOrder(order); //calls the deleteOrder function
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem<String>(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit),
+                            SizedBox(width: 8),
+                            Text('Edit'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete),
+                            SizedBox(width: 8),
+                            Text('Delete'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                trailing: Text(order['status']),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
-      ),
-    ],
-  );
-}   
- 
+      ],
+    );
+  }
 
   Widget _buildBody() {
     // While /me is loading, show a spinner instead of empty content.
@@ -312,7 +365,7 @@ class _DashboardState extends State<Dashboard> {
             'User Details',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
-          
+
           const SizedBox(height: 24),
           Text('Name: $name', style: const TextStyle(fontSize: 18)),
           const SizedBox(height: 12),
